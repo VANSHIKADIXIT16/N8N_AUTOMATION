@@ -1,7 +1,12 @@
 from fastapi import FastAPI
 from backend.database import engine
 from sqlalchemy import text
-from backend.models import Base 
+from backend.models import Base
+from fastapi import Depends
+from sqlalchemy.orm import Session
+from backend.database import get_db
+from backend.schemas.user_schema import UserCreate, UserResponse
+from backend import crud
 
 app = FastAPI()
 
@@ -22,3 +27,7 @@ def test_db_connection():
 @app.get("/")
 def read_root():
     return {"message": "Workflow Backend Running 🚀"}
+
+@app.post("/users", response_model=UserResponse)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    return crud.create_user(db=db, user=user)
