@@ -3,8 +3,9 @@ from backend import models
 from backend.schemas.user_schema import UserCreate
 from datetime import datetime
 import hashlib
-from backend.models import User
+from backend.models import User, Ticket, WorkflowExecution
 from backend.schemas.user_schema import UserUpdate
+from backend.schemas.ticket_schema import TicketCreate
 from fastapi import HTTPException
 
 
@@ -94,3 +95,39 @@ def delete_user(db: Session, user_id: int):
     db.commit()
 
     return {"message": "User deleted successfully"}
+
+def create_ticket(db: Session, ticket: TicketCreate):
+
+    db_ticket = Ticket(
+        customer_id=ticket.customer_id,
+        title=ticket.title,
+        description=ticket.description,
+        category=ticket.category,
+        priority=ticket.priority,
+        status=ticket.status,
+        assigned_to=ticket.assigned_to,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+
+    db.add(db_ticket)
+    db.commit()
+    db.refresh(db_ticket)
+
+    return db_ticket
+
+def create_workflow_execution(db: Session, entity_type: str, entity_id: int):
+
+    execution = WorkflowExecution(
+        entity_type=entity_type,
+        entity_id=entity_id,
+        workflow_name="customer_support",
+        status="RUNNING",
+        started_at=datetime.utcnow()
+    )
+
+    db.add(execution)
+    db.commit()
+    db.refresh(execution)
+
+    return execution
