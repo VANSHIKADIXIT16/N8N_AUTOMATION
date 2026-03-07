@@ -7,6 +7,7 @@ from backend.models import User, Ticket, WorkflowExecution
 from backend.schemas.user_schema import UserUpdate
 from backend.schemas.ticket_schema import TicketCreate
 from fastapi import HTTPException
+from backend.services.workflow_engine import process_ticket_workflow
 
 
 def hash_password(password: str) -> str:
@@ -113,6 +114,12 @@ def create_ticket(db: Session, ticket: TicketCreate):
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
+
+    # 🔹 Create workflow execution
+    workflow = create_workflow_execution(db, "ticket", db_ticket.id)
+
+    # 🔹 Run AI workflow engine
+    process_ticket_workflow(db, db_ticket.id, workflow.id)
 
     return db_ticket
 

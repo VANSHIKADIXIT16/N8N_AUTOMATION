@@ -9,7 +9,9 @@ def process_ticket_workflow(db: Session, ticket_id: int, execution_id: int):
 
         # Get ticket
         ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
-
+        if not ticket:
+            raise Exception("Ticket not found")
+            
         description = ticket.description.lower()
 
         # Simple AI logic
@@ -37,6 +39,10 @@ def process_ticket_workflow(db: Session, ticket_id: int, execution_id: int):
         )
 
         db.add(ai_eval)
+
+        # Simulated notification
+        print("📩 Notification Sent")
+        print(f"Ticket {ticket_id} assigned to user {ticket.assigned_to}")
 
         # Update ticket
         ticket.priority = priority
