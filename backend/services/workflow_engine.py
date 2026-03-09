@@ -40,9 +40,14 @@ def process_ticket_workflow(db: Session, ticket_id: int, execution_id: int):
 
         db.add(ai_eval)
 
+        # ROUTE TICKET
+        department = route_ticket(ticket)
+        ticket.department = department
+
         # Simulated notification
         print("📩 Notification Sent")
         print(f"Ticket {ticket_id} assigned to user {ticket.assigned_to}")
+        print(f"📌 Routed to department: {department}")
 
         # Update ticket
         ticket.priority = priority
@@ -70,3 +75,16 @@ def process_ticket_workflow(db: Session, ticket_id: int, execution_id: int):
         execution.completed_at = datetime.utcnow()
 
         db.commit()
+
+def route_ticket(ticket):
+
+    text = (ticket.title + " " + ticket.description).lower()
+
+    if "refund" in text or "payment" in text:
+        return "billing"
+
+    elif "error" in text or "bug" in text or "login" in text:
+        return "engineering"
+
+    else:
+        return "support"

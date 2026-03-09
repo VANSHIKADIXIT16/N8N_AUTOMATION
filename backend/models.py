@@ -65,6 +65,7 @@ class Ticket(Base):
     priority = Column(String)
     status = Column(String)
     assigned_to = Column(Integer, ForeignKey("users.id"))
+    department = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow)
 

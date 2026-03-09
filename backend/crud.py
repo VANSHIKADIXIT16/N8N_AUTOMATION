@@ -104,9 +104,12 @@ def create_ticket(db: Session, ticket: TicketCreate):
         title=ticket.title,
         description=ticket.description,
         category=ticket.category,
-        priority=ticket.priority,
-        status=ticket.status,
-        assigned_to=ticket.assigned_to,
+
+        # System defaults
+        priority="LOW",
+        status="OPEN",
+        assigned_to=None,
+
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
