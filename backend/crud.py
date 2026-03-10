@@ -27,6 +27,7 @@ def create_user(db: Session, user: UserCreate):
         email=user.email,
         password_hash=hashed_password,
         role=user.role,
+        department=user.department, 
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )

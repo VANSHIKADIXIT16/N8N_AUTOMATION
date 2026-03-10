@@ -44,6 +44,19 @@ def process_ticket_workflow(db: Session, ticket_id: int, execution_id: int):
         department = route_ticket(ticket)
         ticket.department = department
 
+
+        agent_id = assign_agent(db, department)
+
+        if agent_id is not None:
+            ticket.assigned_to = agent_id
+            ticket.status = "IN_PROGRESS"
+        else:
+            ticket.assigned_to = None
+            ticket.status = "OPEN"
+            print("⚠ No agent available. Ticket added to queue.")
+
+        print(f"Agent assigned: {agent_id}")
+
         # Simulated notification
         print("📩 Notification Sent")
         print(f"Ticket {ticket_id} assigned to user {ticket.assigned_to}")
@@ -88,3 +101,30 @@ def route_ticket(ticket):
 
     else:
         return "support"
+
+def assign_agent(db: Session, department: str):
+    
+    from backend.models import User, Ticket
+
+    agents = db.query(User).filter(
+        User.role == "agent",
+        User.department == department
+    ).all()
+
+    if not agents:
+        return None
+
+    # count tickets assigned to each agent
+    agent_ticket_counts = []
+
+    for agent in agents:
+        count = db.query(Ticket).filter(
+            Ticket.assigned_to == agent.id
+        ).count()
+
+        agent_ticket_counts.append((agent.id, count))
+
+    # choose agent with minimum tickets
+    selected_agent = min(agent_ticket_counts, key=lambda x: x[1])
+
+    return selected_agent[0]

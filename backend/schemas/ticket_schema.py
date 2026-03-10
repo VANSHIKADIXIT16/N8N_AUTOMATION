@@ -9,6 +9,10 @@ class TicketBase(BaseModel):
     title: str
     description: str
     category: str
+    department: str | None = None
+    priority: str
+    status: str
+    assigned_to: int | None = None
 
 
 # Used when CUSTOMER creates ticket

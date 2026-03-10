@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     name: str
     email: EmailStr
     role: str
+    department: Optional[str] = None
 
 
 # 🔹 For Creating User
@@ -20,6 +21,7 @@ class UserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     role: Optional[str] = None
+    department: Optional[str] = None
     password: Optional[str] = None
     is_active: Optional[bool] = None
 
