@@ -3,7 +3,7 @@ from backend import models
 from backend.schemas.user_schema import UserCreate
 from datetime import datetime
 import hashlib
-from backend.models import User, Ticket, WorkflowExecution
+from backend.models import User, Ticket, WorkflowExecution , Notification
 from backend.schemas.user_schema import UserUpdate
 from backend.schemas.ticket_schema import TicketCreate
 from fastapi import HTTPException
@@ -142,3 +142,18 @@ def create_workflow_execution(db: Session, entity_type: str, entity_id: int):
     db.refresh(execution)
 
     return execution
+
+def create_notification(db: Session, user_id: int, message: str):
+
+    notification = Notification(
+        user_id=user_id,
+        message=message,
+        type="system",
+        status="sent"
+    )
+
+    db.add(notification)
+    db.commit()
+    db.refresh(notification)
+
+    return notification

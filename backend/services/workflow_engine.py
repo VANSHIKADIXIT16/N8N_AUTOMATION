@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from backend.models import Ticket, WorkflowExecution, AIEvaluation
 from datetime import datetime
+from backend.services.notification_service import create_notification
 
 
 def process_ticket_workflow(db: Session, ticket_id: int, execution_id: int):
@@ -50,6 +51,11 @@ def process_ticket_workflow(db: Session, ticket_id: int, execution_id: int):
         if agent_id is not None:
             ticket.assigned_to = agent_id
             ticket.status = "IN_PROGRESS"
+            create_notification(
+                db,
+                agent_id,
+                f"New ticket assigned: {ticket.title}"
+            )
         else:
             ticket.assigned_to = None
             ticket.status = "OPEN"
