@@ -157,3 +157,24 @@ def create_notification(db: Session, user_id: int, message: str):
     db.refresh(notification)
 
     return notification
+
+def get_notifications_by_user(db: Session, user_id: int):
+    return db.query(Notification).filter(Notification.user_id == user_id).all()
+
+
+def get_all_notifications(db: Session):
+    return db.query(Notification).all()
+
+
+def mark_notification_read(db: Session, notification_id: int):
+    notification = db.query(Notification).filter(Notification.id == notification_id).first()
+
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+
+    notification.status = "read"
+
+    db.commit()
+    db.refresh(notification)
+
+    return notification

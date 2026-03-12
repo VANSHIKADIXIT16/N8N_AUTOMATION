@@ -9,8 +9,11 @@ from backend.schemas.user_schema import UserCreate, UserResponse
 from backend import crud
 from backend.schemas.ticket_schema import TicketCreate, TicketResponse
 from backend.services.workflow_engine import process_ticket_workflow
+from backend.routes import notification_routes
 
 app = FastAPI()
+
+app.include_router(notification_routes.router)
 
 @app.on_event("startup")
 def test_db_connection():
