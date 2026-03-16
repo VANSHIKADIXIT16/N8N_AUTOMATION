@@ -72,6 +72,18 @@ class Ticket(Base):
 
     customer = relationship("Customer", back_populates="tickets")
     assigned_user = relationship("User", back_populates="tickets")
+
+class TicketMessage(Base):
+    __tablename__ = "ticket_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticket_id = Column(Integer, ForeignKey("tickets.id"))
+    sender_id = Column(Integer, ForeignKey("users.id"))
+    message = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    ticket = relationship("Ticket")
+    
 class AIEvaluation(Base):
     __tablename__ = "ai_evaluations"
 
