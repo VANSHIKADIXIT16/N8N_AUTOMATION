@@ -1,4 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+
 from sqlalchemy.orm import Session
 from database import engine, get_db, Base
 from models import Candidate, Complaint
@@ -10,32 +12,61 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Resume Parsing & Complaint Routing System")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8080"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Resume Parsing & Complaint Routing System API"}
 
 @app.post("/upload_resume/")
-async def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_resume(
+    file: UploadFile = File(...), 
+    parsed_data: str = Form(None), # Optional parsed JSON data from frontend
+    db: Session = Depends(get_db)
+):
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
-    # Read PDF content
-    content = await file.read()
-    text = extract_text_from_pdf(content)
+    import json
+    info = None
+    if parsed_data:
+        try:
+            info = json.loads(parsed_data)
+        except:
+            pass
+            
+    if not info:
+        # Fallback to backend parsing if frontend data is missing
+        content = await file.read()
+        text = extract_text_from_pdf(content)
+        info = extract_candidate_info(text)
+        # Handle cases where name is missing
+        if "name" not in info or info["name"] == "Unknown":
+            info["name"] = file.filename.split('.')[0]
     
-    # Extract information
-    info = extract_candidate_info(text)
+    # Ensure consistency in info structure
+    name = info.get("name", file.filename.split('.')[0])
+    email = info.get("email", "N/A")
+    skills = info.get("skills", [])
+    experience = info.get("experience", 0)
     
     # Calculate score and determine status
-    score = calculate_score(info["skills"], info["experience"])
-    status = determine_status(score, info["experience"])
+    score = calculate_score(skills, experience)
+    status = determine_status(score, experience)
     
     # Store in database
     new_candidate = Candidate(
-        name=file.filename.split('.')[0],
-        email=info["email"],
-        skills=", ".join(info["skills"]),
-        experience=info["experience"],
+        name=name,
+        email=email,
+        skills=", ".join(skills),
+        experience=experience,
         score=score,
         status=status
     )
@@ -48,13 +79,14 @@ async def upload_resume(file: UploadFile = File(...), db: Session = Depends(get_
     email_response = f"Hello {new_candidate.name}, your application for a position has been processed. Status: {status}."
     
     # Attempt to send via Gmail API
-    email_sent = send_email_gmail(info["email"], subject, email_response)
+    email_sent = send_email_gmail(email, subject, email_response)
     
     return {
         "candidate_id": new_candidate.id,
-        "email": info["email"],
-        "skills": info["skills"],
-        "experience": info["experience"],
+        "name": name,
+        "email": email,
+        "skills": skills,
+        "experience": experience,
         "score": score,
         "status": status,
         "email_response": email_response,
