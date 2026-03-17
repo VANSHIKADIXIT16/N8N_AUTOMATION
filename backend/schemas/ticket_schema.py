@@ -16,8 +16,11 @@ class TicketBase(BaseModel):
 
 
 # Used when CUSTOMER creates ticket
-class TicketCreate(TicketBase):
-    pass
+class TicketCreate(BaseModel):
+    customer_id: int
+    title: str
+    description: str
+    category: str
 
 
 # Used internally by system / agents
