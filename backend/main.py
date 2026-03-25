@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
+from models import Candidate, Complaint, Role, Skill
 from sqlalchemy.orm import Session
 from database import engine, get_db, Base
 from models import Candidate, Complaint
@@ -20,6 +20,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.post("/roles/")
+def create_role(name: str, db: Session = Depends(get_db)):
+    existing = db.query(Role).filter(Role.name == name).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Role already exists")
+    
+    new_role = Role(name=name)
+    db.add(new_role)
+    db.commit()
+    db.refresh(new_role)
+    
+    return {"id": new_role.id, "name": new_role.name}
+
+@app.post("/roles/{role_id}/skills/")
+def add_skills(role_id: int, skills: List[str], db: Session = Depends(get_db)):
+    role = db.query(Role).filter(Role.id == role_id).first()
+    
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    
+    created_skills = []
+    
+    for skill_name in skills:
+        skill = Skill(name=skill_name, role_id=role_id)
+        db.add(skill)
+        created_skills.append(skill_name)
+    
+    db.commit()
+    
+    return {
+        "message": "Skills added successfully",
+        "skills": created_skills
+    }
+
+@app.get("/roles/{role_id}/skills/")
+def get_skills(role_id: int, db: Session = Depends(get_db)):
+    role = db.query(Role).filter(Role.id == role_id).first()
+    
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    
+    skills = [skill.name for skill in role.skills]
+    
+    return {
+        "role": role.name,
+        "skills": skills
+    }
 
 @app.get("/")
 def read_root():

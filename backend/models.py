@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime,ForeignKey
+from sqlalchemy.orm import relationship
 from database import Base
 import datetime
 
@@ -23,3 +24,23 @@ class Complaint(Base):
     description = Column(String)
     department = Column(String)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+# ✅ NEW MODELS
+
+class Role(Base):
+    __tablename__ = "roles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True)
+
+    skills = relationship("Skill", back_populates="role")
+
+
+class Skill(Base):
+    __tablename__ = "skills"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+
+    role_id = Column(Integer, ForeignKey("roles.id"))
+    role = relationship("Role", back_populates="skills")
