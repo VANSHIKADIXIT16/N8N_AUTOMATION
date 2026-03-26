@@ -4,8 +4,10 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
+
 from database import SessionLocal
-from models import Candidate, Complaint
+from models import Candidate, Complaint, Role
+
 from utils import (
     extract_text_from_pdf,
     extract_candidate_info,
@@ -42,7 +44,6 @@ def get_gmail_service():
 def process_unread_emails():
     service = get_gmail_service()
 
-    # ✅ Better filter (recent unread only)
     results = service.users().messages().list(
         userId='me',
         q='is:unread newer_than:1d'
@@ -56,9 +57,20 @@ def process_unread_emails():
 
     db = SessionLocal()
 
+    # ✅ ROLE + SKILLS FETCH (CORRECT PLACEMENT)
+    DEFAULT_ROLE_ID = 1
+
+    role = db.query(Role).filter(Role.id == DEFAULT_ROLE_ID).first()
+
+    if not role:
+        print("Role not found. Please create role first.")
+        db.close()
+        return
+
+    skills_from_db = [{"name": skill.name, "type": skill.type} for skill in role.skills]
+
     for msg in messages:
         try:
-            # ✅ Mark as read FIRST (prevents reprocessing loop)
             service.users().messages().batchModify(
                 userId='me',
                 body={'ids': [msg['id']], 'removeLabelIds': ['UNREAD']}
@@ -66,7 +78,6 @@ def process_unread_emails():
 
             print("Marked as read early:", msg['id'])
 
-            # Fetch message
             message = service.users().messages().get(
                 userId='me', id=msg['id']
             ).execute()
@@ -83,12 +94,10 @@ def process_unread_emails():
                 if header['name'] == 'From':
                     sender = header['value']
 
-            # ✅ Debug prints
             print("\n--- NEW EMAIL ---")
             print("Email from:", sender)
             print("Subject:", subject)
 
-            # Check for attachments
             parts = payload.get('parts', [])
 
             for part in parts:
@@ -111,10 +120,14 @@ def process_unread_emails():
                     )
 
                     text = extract_text_from_pdf(data)
-                    info = extract_candidate_info(text)
+
+                    # ✅ UPDATED: PASS SKILLS FROM DB
+                    info = extract_candidate_info(text, skills_from_db)
+
                     score = calculate_score(
                         info["skills"], info["experience"]
                     )
+
                     status = determine_status(
                         score, info["experience"]
                     )
@@ -122,7 +135,7 @@ def process_unread_emails():
                     new_candidate = Candidate(
                         name=part['filename'].split('.')[0],
                         email=info["email"] if info["email"] != "N/A" else sender,
-                        skills=", ".join(info["skills"]),
+                        skills=", ".join([s["name"] for s in info["skills"]]),
                         experience=info["experience"],
                         score=score,
                         status=status
@@ -131,7 +144,6 @@ def process_unread_emails():
                     db.add(new_candidate)
                     db.commit()
 
-                    # Send reply
                     reply_content = f"Hello, we have received your resume. Status: {status}."
                     send_email_gmail(sender, "Application Update", reply_content)
 

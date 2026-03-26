@@ -41,6 +41,7 @@ class Skill(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
+    type = Column(String, default="optional")  # ✅ ADD THIS LINE
 
     role_id = Column(Integer, ForeignKey("roles.id"))
     role = relationship("Role", back_populates="skills")
