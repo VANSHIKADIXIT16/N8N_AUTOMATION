@@ -33,9 +33,8 @@ def create_role(name: str, db: Session = Depends(get_db)):
     db.refresh(new_role)
     
     return {"id": new_role.id, "name": new_role.name}
-
 @app.post("/roles/{role_id}/skills/")
-def add_skills(role_id: int, skills: List[str], db: Session = Depends(get_db)):
+def add_skills(role_id: int, skills: List[dict], db: Session = Depends(get_db)):
     role = db.query(Role).filter(Role.id == role_id).first()
     
     if not role:
@@ -43,10 +42,14 @@ def add_skills(role_id: int, skills: List[str], db: Session = Depends(get_db)):
     
     created_skills = []
     
-    for skill_name in skills:
-        skill = Skill(name=skill_name, role_id=role_id)
-        db.add(skill)
-        created_skills.append(skill_name)
+    for skill_data in skills:
+        skill = Skill(
+            name=skill_data["name"],
+            type=skill_data.get("type", "optional"),
+            role_id=role_id
+        )
+    db.add(skill)
+    created_skills.append(skill_name)
     
     db.commit()
     
@@ -76,9 +79,16 @@ def read_root():
 @app.post("/upload_resume/")
 async def upload_resume(
     file: UploadFile = File(...), 
-    parsed_data: str = Form(None), # Optional parsed JSON data from frontend
+    role_id: int = Form(...),
+    parsed_data: str = Form(None),
     db: Session = Depends(get_db)
 ):
+    role = db.query(Role).filter(Role.id == role_id).first()
+    
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    skills_from_db = [{"name": skill.name, "type": skill.type} for skill in role.skills]
+
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
@@ -94,7 +104,7 @@ async def upload_resume(
         # Fallback to backend parsing if frontend data is missing
         content = await file.read()
         text = extract_text_from_pdf(content)
-        info = extract_candidate_info(text)
+        info = extract_candidate_info(text, skills_from_db)
         # Handle cases where name is missing
         if "name" not in info or info["name"] == "Unknown":
             info["name"] = file.filename.split('.')[0]
@@ -113,7 +123,7 @@ async def upload_resume(
     new_candidate = Candidate(
         name=name,
         email=email,
-        skills=", ".join(skills),
+        skills=", ".join([s["name"] for s in info["skills"]]),
         experience=experience,
         score=score,
         status=status

@@ -1,19 +1,40 @@
 import re
 import PyPDF2
 import io
+from rapidfuzz import fuzz
+import os
+
+client = None
+
+def extract_skills_with_ai(text: str):
+    return []
+
+def match_skills_with_fuzzy(text: str, skills_from_db: list, threshold: int = 80):
+    text_lower = text.lower()
+    found_skills = []
+
+    for skill in skills_from_db:
+        skill_name = skill["name"]
+        skill_type = skill["type"]
+
+        skill_lower = skill_name.lower()
+
+        if skill_lower in text_lower:
+            found_skills.append(skill)
+            continue
+
+        for word in text_lower.split():
+            if fuzz.partial_ratio(skill_lower, word) >= threshold:
+                found_skills.append(skill)
+                break
+
+    return found_skills
 
 # Regex for email extraction
 EMAIL_REGEX = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
 
 # Regex for experience extraction (e.g., "5 years", "3+ years")
 EXPERIENCE_REGEX = r'(\d+)\s*(?:\+)?\s*years'
-
-# Keywords for skills
-SKILLS_LIST = [
-    "Python", "JavaScript", "React", "Node.js", "SQL", "Machine Learning", 
-    "Data Analysis", "Project Management", "Communication", "Leadership",
-    "Customer Support", "Sales", "Marketing", "Cloud Computing", "AWS", "Azure"
-]
 
 # Complaint routing keywords
 DEPARTMENT_KEYWORDS = {
@@ -30,29 +51,69 @@ def extract_text_from_pdf(pdf_content: bytes) -> str:
         text += page.extract_text() or ""
     return text
 
-def extract_candidate_info(text: str):
+def extract_candidate_info(text: str, skills_from_db: list):
+    import re
+
     # Extract email
+    EMAIL_REGEX = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
     email_match = re.search(EMAIL_REGEX, text)
     email = email_match.group(0) if email_match else "N/A"
-    
-    # Extract skills
-    found_skills = [skill for skill in SKILLS_LIST if skill.lower() in text.lower()]
-    
-    # Extract experience (summing multiple mentions or taking the max)
+
+    # Extract experience
+    EXPERIENCE_REGEX = r'(\d+)\s*(?:\+)?\s*years'
     exp_matches = re.findall(EXPERIENCE_REGEX, text.lower())
     experience = max([int(e) for e in exp_matches]) if exp_matches else 0
-    
+
+    # 🔥 Rule-based (DB skills)
+    matched_skills = match_skills_with_fuzzy(text, skills_from_db)
+
+    # 🔥 AI-based extraction
+    ai_skills = extract_skills_with_ai(text)
+
+    # 🔥 Merge both
+    final_skills = matched_skills.copy()
+
+    for ai_skill in ai_skills:
+        for db_skill in skills_from_db:
+            if ai_skill.lower() in db_skill["name"].lower():
+                if db_skill not in final_skills:
+                    final_skills.append(db_skill)
+
     return {
         "email": email,
-        "skills": found_skills,
+        "skills": final_skills,
         "experience": experience
     }
 
 def calculate_score(skills: list, experience: int) -> float:
-    # Example scoring: 10 points per skill (max 50) + 10 points per year of experience (max 50)
-    skill_score = min(len(skills) * 10, 50)
-    exp_score = min(experience * 10, 50)
-    return float(skill_score + exp_score)
+    score = 0
+
+    required_total = 0
+    required_matched = 0
+
+    for skill in skills:
+        skill_type = skill["type"]
+
+        if skill_type == "required":
+            score += 20
+            required_matched += 1
+            required_total += 1
+
+        elif skill_type == "optional":
+            score += 10
+
+        elif skill_type == "bonus":
+            score += 5
+
+    # Experience weight
+    score += min(experience * 5, 25)
+
+    # Penalize if required skills missing
+    if required_total > 0:
+        ratio = required_matched / required_total
+        score *= ratio
+
+    return round(score, 2)
 
 def determine_status(score: float, experience: int) -> str:
     # Eligibility criteria: at least 40 points and 2 years experience
