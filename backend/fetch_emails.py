@@ -57,9 +57,8 @@ def process_unread_emails():
 
     db = SessionLocal()
 
-    # ✅ ROLE + SKILLS FETCH (CORRECT PLACEMENT)
+    # 🔹 Fetch Role + Skills
     DEFAULT_ROLE_ID = 1
-
     role = db.query(Role).filter(Role.id == DEFAULT_ROLE_ID).first()
 
     if not role:
@@ -71,6 +70,7 @@ def process_unread_emails():
 
     for msg in messages:
         try:
+            # ✅ Mark as read first
             service.users().messages().batchModify(
                 userId='me',
                 body={'ids': [msg['id']], 'removeLabelIds': ['UNREAD']}
@@ -107,6 +107,7 @@ def process_unread_emails():
                 # RESUME PROCESSING
                 # ======================
                 if part.get('filename') and part.get('filename').endswith('.pdf'):
+
                     attachment_id = part['body']['attachmentId']
 
                     attachment = service.users().messages().attachments().get(
@@ -121,7 +122,7 @@ def process_unread_emails():
 
                     text = extract_text_from_pdf(data)
 
-                    # ✅ UPDATED: PASS SKILLS FROM DB
+                    # 🔹 Extract info
                     info = extract_candidate_info(text, skills_from_db)
 
                     score = calculate_score(
@@ -132,9 +133,21 @@ def process_unread_emails():
                         score, info["experience"]
                     )
 
+                    candidate_email = info["email"] if info["email"] != "N/A" else sender
+
+                    # 🔥 FIX: Check duplicate AFTER extraction
+                    existing = db.query(Candidate).filter(
+                        Candidate.email == candidate_email
+                    ).first()
+
+                    if existing:
+                        print("⚠️ Candidate already exists, skipping...")
+                        continue
+
+                    # 🔹 Insert new candidate
                     new_candidate = Candidate(
                         name=part['filename'].split('.')[0],
-                        email=info["email"] if info["email"] != "N/A" else sender,
+                        email=candidate_email,
                         skills=", ".join([s["name"] for s in info["skills"]]),
                         experience=info["experience"],
                         score=score,
@@ -144,6 +157,9 @@ def process_unread_emails():
                     db.add(new_candidate)
                     db.commit()
 
+                    print("✅ New candidate added")
+
+                    # 🔹 Send email
                     reply_content = f"Hello, we have received your resume. Status: {status}."
                     send_email_gmail(sender, "Application Update", reply_content)
 
@@ -177,6 +193,8 @@ def process_unread_emails():
 
                         db.add(new_complaint)
                         db.commit()
+
+                        print("✅ Complaint stored")
 
                         reply_content = f"Hello, your complaint has been routed to the {dept} department."
                         send_email_gmail(sender, "Complaint Update", reply_content)
