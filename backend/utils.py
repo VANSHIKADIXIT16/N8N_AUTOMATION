@@ -9,6 +9,7 @@ client = None
 def extract_skills_with_ai(text: str):
     return []
 
+
 def match_skills_with_fuzzy(text: str, skills_from_db: list, threshold: int = 80):
     text_lower = text.lower()
     found_skills = []
@@ -30,19 +31,19 @@ def match_skills_with_fuzzy(text: str, skills_from_db: list, threshold: int = 80
 
     return found_skills
 
-# Regex for email extraction
+
+# ✅ Global Regex (ONLY here)
 EMAIL_REGEX = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+EXPERIENCE_REGEX = r'(\d+)\s*(?:\+)?\s*(years?|yrs?)'
 
-# Regex for experience extraction (e.g., "5 years", "3+ years")
-EXPERIENCE_REGEX = r'(\d+)\s*(?:\+)?\s*years'
 
-# Complaint routing keywords
 DEPARTMENT_KEYWORDS = {
     "IT Support": ["computer", "software", "hardware", "internet", "password", "system", "email", "bug", "crash"],
     "HR": ["payroll", "leave", "salary", "recruitment", "benefit", "policy", "employee"],
     "Finance": ["invoice", "payment", "billing", "refund", "tax", "budget", "expense"],
-    "General": []  # Default
+    "General": []
 }
+
 
 def extract_text_from_pdf(pdf_content: bytes) -> str:
     pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_content))
@@ -51,23 +52,20 @@ def extract_text_from_pdf(pdf_content: bytes) -> str:
         text += page.extract_text() or ""
     return text
 
-def extract_candidate_info(text: str, skills_from_db: list):
-    import re
 
-    # Extract email
-    EMAIL_REGEX = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+def extract_candidate_info(text: str, skills_from_db: list):
+    # ✅ Email extraction
     email_match = re.search(EMAIL_REGEX, text)
     email = email_match.group(0) if email_match else "N/A"
 
-    # Extract experience
-    EXPERIENCE_REGEX = r'(\d+)\s*(?:\+)?\s*years'
+    # ✅ Experience extraction (FIXED)
     exp_matches = re.findall(EXPERIENCE_REGEX, text.lower())
-    experience = max([int(e) for e in exp_matches]) if exp_matches else 0
+    experience = max([int(e[0]) for e in exp_matches]) if exp_matches else 0
 
-    # 🔥 Rule-based (DB skills)
+    # 🔥 Rule-based skills
     matched_skills = match_skills_with_fuzzy(text, skills_from_db)
 
-    # 🔥 AI-based extraction
+    # 🔥 AI skills (disabled)
     ai_skills = extract_skills_with_ai(text)
 
     # 🔥 Merge both
@@ -84,6 +82,7 @@ def extract_candidate_info(text: str, skills_from_db: list):
         "skills": final_skills,
         "experience": experience
     }
+
 
 def calculate_score(skills: list, experience: int) -> float:
     score = 0
@@ -105,21 +104,22 @@ def calculate_score(skills: list, experience: int) -> float:
         elif skill_type == "bonus":
             score += 5
 
-    # Experience weight
     score += min(experience * 5, 25)
 
-    # Penalize if required skills missing
     if required_total > 0:
         ratio = required_matched / required_total
         score *= ratio
 
     return round(score, 2)
 
+
 def determine_status(score: float, experience: int) -> str:
-    # Eligibility criteria: at least 40 points and 2 years experience
-    if score >= 40 and experience >= 2:
+    if score >= 60:
         return "Shortlisted"
+    elif score >= 40:
+        return "Review"
     return "Rejected"
+
 
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -129,28 +129,21 @@ import os.path
 import base64
 from email.message import EmailMessage
 
-# If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
+
 def send_email_gmail(to_email: str, subject: str, content: str):
-    """
-    Sends an email using the Gmail API.
-    Requires credentials.json and token.json.
-    """
     creds = None
     if os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    
-    # If there are no (valid) credentials available, let the user log in.
+
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            # This part requires manual setup and credentials.json file
-            # For this simulation, we'll log a message instead.
             print(f"Gmail API not configured. Would have sent to {to_email}: {content}")
             return False
-            
+
     try:
         service = build('gmail', 'v1', credentials=creds)
         message = EmailMessage()
@@ -159,19 +152,21 @@ def send_email_gmail(to_email: str, subject: str, content: str):
         message['From'] = 'me'
         message['Subject'] = subject
 
-        # encoded message
         encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
 
-        create_message = {
-            'raw': encoded_message
-        }
-        
-        send_message = (service.users().messages().send(userId="me", body=create_message).execute())
+        create_message = {'raw': encoded_message}
+
+        send_message = service.users().messages().send(
+            userId="me", body=create_message
+        ).execute()
+
         print(f'Message Id: {send_message["id"]}')
         return True
+
     except Exception as error:
         print(f'An error occurred: {error}')
         return False
+
 
 def route_complaint(description: str) -> str:
     description_lower = description.lower()
