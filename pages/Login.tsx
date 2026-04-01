@@ -27,10 +27,12 @@ export default function Login() {
       // Demo: route based on email domain
       if (email.includes("cs") || email.includes("customer")) {
         navigate("/cs-dashboard");
+      } else if (email.includes("hr") || email.includes("ats")) {
+        navigate("/ats-dashboard");
       } else if (email.includes("employee")) {
         navigate("/employee-dashboard");
       } else {
-        navigate("/employee-dashboard"); // Default to employee
+        navigate("/role-selection"); // Default to role selection for better demo
       }
     } finally {
       setIsLoading(false);

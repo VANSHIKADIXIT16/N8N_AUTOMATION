@@ -1,27 +1,63 @@
-from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, Response
+from fastapi.responses import FileResponse
+import os
 from fastapi.middleware.cors import CORSMiddleware
-from models import Candidate, Complaint, Role, Skill
 from sqlalchemy.orm import Session
-from database import engine, get_db, Base
-from models import Candidate, Complaint
-from utils import extract_text_from_pdf, extract_candidate_info, calculate_score, determine_status, route_complaint, send_email_gmail
 from typing import List
+from threading import Thread
+import time
+
+from models import Candidate, Complaint, Role, Skill
+from database import engine, get_db, Base
+from utils import extract_text_from_pdf, extract_candidate_info, calculate_score, determine_status, route_complaint, send_email_gmail
+from fetch_emails import fetch_and_process_emails
+import base64
+
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+app = FastAPI(title="Resume Parsing & Complaint Routing System")
+
+# ✅ Background Email Worker
+def email_worker():
+    while True:
+        try:
+            print("📩 Checking for new emails...")
+            fetch_and_process_emails()
+        except Exception as e:
+            print("❌ Email fetch error:", e)
+        time.sleep(60)  # check every 60 seconds
+
+# ✅ Start on backend startup
+@app.on_event("startup")
+def start_email_listener():
+    thread = Thread(target=email_worker, daemon=True)
+    thread.start()
 
 # Create tables
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Resume Parsing & Complaint Routing System")
-
+# CORS Fix
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)
+
+@app.get("/roles/")
+def get_roles(db: Session = Depends(get_db)):
+    return db.query(Role).all()
+
 @app.post("/roles/")
 def create_role(name: str, db: Session = Depends(get_db)):
+    print(f"Creating role: {name}")
     existing = db.query(Role).filter(Role.name == name).first()
     
     if existing:
@@ -33,8 +69,10 @@ def create_role(name: str, db: Session = Depends(get_db)):
     db.refresh(new_role)
     
     return {"id": new_role.id, "name": new_role.name}
+
 @app.post("/roles/{role_id}/skills/")
 def add_skills(role_id: int, skills: List[dict], db: Session = Depends(get_db)):
+    print(f"Adding skills to role {role_id}: {skills}")
     role = db.query(Role).filter(Role.id == role_id).first()
     
     if not role:
@@ -48,8 +86,8 @@ def add_skills(role_id: int, skills: List[dict], db: Session = Depends(get_db)):
             type=skill_data.get("type", "optional"),
             role_id=role_id
         )
-    db.add(skill)
-    created_skills.append(skill_name)
+        db.add(skill)
+        created_skills.append(skill.name)
     
     db.commit()
     
@@ -87,6 +125,7 @@ async def upload_resume(
     
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
+
     skills_from_db = [{"name": skill.name, "type": skill.type} for skill in role.skills]
 
     if file.content_type != "application/pdf":
@@ -101,42 +140,42 @@ async def upload_resume(
             pass
             
     if not info:
-        # Fallback to backend parsing if frontend data is missing
         content = await file.read()
         text = extract_text_from_pdf(content)
         info = extract_candidate_info(text, skills_from_db)
-        # Handle cases where name is missing
+
         if "name" not in info or info["name"] == "Unknown":
             info["name"] = file.filename.split('.')[0]
     
-    # Ensure consistency in info structure
     name = info.get("name", file.filename.split('.')[0])
     email = info.get("email", "N/A")
     skills = info.get("skills", [])
+    
+    if isinstance(skills, str):
+        skills = [s.strip() for s in skills.split(",") if s.strip()]
+    
     experience = info.get("experience", 0)
     
-    # Calculate score and determine status
     score = calculate_score(skills, experience)
     status = determine_status(score, experience)
     
-    # Store in database
     new_candidate = Candidate(
         name=name,
         email=email,
-        skills=", ".join([s["name"] for s in info["skills"]]),
+        skills=", ".join([s["name"] if isinstance(s, dict) else s for s in skills]),
         experience=experience,
         score=score,
-        status=status
+        status=status,
+        role_id=role_id
     )
+
     db.add(new_candidate)
     db.commit()
     db.refresh(new_candidate)
     
-    # Send automated email response
     subject = f"Application Status Update - {new_candidate.name}"
-    email_response = f"Hello {new_candidate.name}, your application for a position has been processed. Status: {status}."
+    email_response = f"Hello {new_candidate.name}, your application has been processed. Status: {status}."
     
-    # Attempt to send via Gmail API
     email_sent = send_email_gmail(email, subject, email_response)
     
     return {
@@ -153,16 +192,15 @@ async def upload_resume(
 
 @app.post("/submit_complaint/")
 async def submit_complaint(user_name: str = Form(...), email: str = Form(...), description: str = Form(...), db: Session = Depends(get_db)):
-    # Route complaint
     department = route_complaint(description)
     
-    # Store in database
     new_complaint = Complaint(
         user_name=user_name,
         email=email,
         description=description,
         department=department
     )
+
     db.add(new_complaint)
     db.commit()
     db.refresh(new_complaint)
@@ -180,3 +218,7 @@ def get_candidates(db: Session = Depends(get_db)):
 @app.get("/complaints/")
 def get_complaints(db: Session = Depends(get_db)):
     return db.query(Complaint).all()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8003)

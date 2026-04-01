@@ -21,6 +21,9 @@ export default function RoleSelection() {
         case "employee":
           navigate("/employee-dashboard");
           break;
+        case "hr":
+          navigate("/ats-dashboard");
+          break;
       }
     } finally {
       setIsLoading(false);
@@ -28,6 +31,23 @@ export default function RoleSelection() {
   };
 
   const roles = [
+    {
+      id: "hr",
+      title: "HR / ATS Manager",
+      icon: Briefcase,
+      description: "Manage job roles, resume parsing, and candidate pipelines",
+      features: [
+        "Create & Manage Job Roles",
+        "Resume Parsing & Scoring",
+        "Candidate Shortlisting",
+        "Automated Email Responses",
+        "ATS Analytics Dashboard",
+        "Recruitment Workflow Monitoring",
+      ],
+      color: "from-green-50 to-green-100",
+      borderColor: "border-green-200",
+      accentColor: "bg-green-100",
+    },
     {
       id: "customer-service",
       title: "Customer Service",
@@ -159,6 +179,9 @@ export default function RoleSelection() {
             features and permissions.
           </p>
           <ul className="space-y-2 text-sm text-slate-600">
+            <li>
+              <strong>HR / ATS Manager:</strong> Manage job roles, resume parsing, and candidate pipelines
+            </li>
             <li>
               <strong>Customer Service:</strong> Manage support tickets, track
               SLA, and use AI-suggested responses

@@ -13,6 +13,7 @@ class Candidate(Base):
     experience = Column(Integer)
     score = Column(Float)
     status = Column(String)  # Shortlisted, Rejected, Pending
+    role_id = Column(Integer, ForeignKey("roles.id"))
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Complaint(Base):
