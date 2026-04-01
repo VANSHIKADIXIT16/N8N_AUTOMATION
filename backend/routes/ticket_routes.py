@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.schemas.ticket_schema import TicketCreate, TicketResponse
 from backend.schemas.ticket_message_schema import TicketMessageCreate, TicketMessageResponse
-from backend.services.workflow_engine import process_ticket_workflow
 from backend import crud
 from backend.models import Ticket
 from backend.services.notification_service import create_notification
@@ -14,18 +13,8 @@ router = APIRouter(prefix="/tickets", tags=["Tickets"])
 @router.post("/", response_model=TicketResponse)
 def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
 
-    # Step 1: create ticket
+    # ✅ ONLY THIS LINE (workflow already handled inside CRUD)
     db_ticket = crud.create_ticket(db, ticket)
-
-    # Step 2: create workflow execution
-    execution = crud.create_workflow_execution(
-        db,
-        entity_type="ticket",
-        entity_id=db_ticket.id
-    )
-
-    # Step 3: run workflow engine
-    process_ticket_workflow(db, db_ticket.id, execution.id)
 
     return db_ticket
 
@@ -66,9 +55,14 @@ def resolve_ticket(ticket_id: int, db: Session = Depends(get_db)):
     # Create notification for customer
     message = f"Your ticket #{ticket.id} has been resolved by support."
 
+    customer = ticket.customer
+
+    if not customer or not customer.user_id:
+        return {"error": "Customer user not found"}
+
     create_notification(
         db=db,
-        user_id=ticket.customer_id,
+        user_id=customer.user_id,  # ✅ correct user
         message=message,
         type="system"
     )

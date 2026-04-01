@@ -11,6 +11,9 @@ from backend.schemas.ticket_schema import TicketCreate, TicketResponse
 from backend.services.workflow_engine import process_ticket_workflow
 from backend.routes import notification_routes
 from backend.routes import ticket_routes, escalation_routes
+from backend.routes import dashboard_routes 
+from backend.routes import customer_routes
+from backend.schemas.customer_schema import CustomerCreate, CustomerResponse
 
 
 app = FastAPI()
@@ -18,6 +21,8 @@ app = FastAPI()
 app.include_router(notification_routes.router)
 app.include_router(ticket_routes.router)
 app.include_router(escalation_routes.router)
+app.include_router(dashboard_routes.router)
+app.include_router(customer_routes.router)
 
 @app.on_event("startup")
 def test_db_connection():

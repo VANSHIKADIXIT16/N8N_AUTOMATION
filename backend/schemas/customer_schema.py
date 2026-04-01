@@ -1,20 +1,19 @@
-from pydantic import BaseModel, EmailStr
-from datetime import datetime
+from pydantic import BaseModel
+from typing import Optional
 
-
-class CustomerBase(BaseModel):
+class CustomerCreate(BaseModel):
+    user_id: Optional[int] = None
     name: str
-    email: EmailStr
-    phone: str
+    email: str
+    phone: Optional[str] = None
 
 
-class CustomerCreate(CustomerBase):
-    pass
-
-
-class CustomerResponse(CustomerBase):
+class CustomerResponse(BaseModel):
     id: int
-    created_at: datetime
+    user_id: Optional[int]
+    name: str
+    email: str
+    phone: Optional[str]
 
-    class Config:
-        from_attributes = True
+class Config:
+    from_attributes = True

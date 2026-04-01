@@ -12,28 +12,56 @@ def check_ticket_escalations(db: Session):
 
         time_passed = datetime.utcnow() - ticket.created_at
 
+        # ⏱️ Escalate if > 24 hours
         if time_passed > timedelta(hours=24):
 
             old_agent = ticket.assigned_to
+            department = ticket.department
 
-            # ✅ FIX: Get valid user from DB
-            new_user = db.query(User).first()
+            # 🔹 Get all agents in same department
+            agents = db.query(User).filter(
+                User.role == "agent",
+                User.department == department
+            ).all()
 
-            if not new_user:
-                print("⚠ No agent available for escalation")
+            if not agents:
+                print("⚠ No agents found for escalation")
                 continue
 
-            new_agent = new_user.id
+            # 🔹 Remove current agent
+            available_agents = [a for a in agents if a.id != old_agent]
 
-            if old_agent != new_agent:
+            if not available_agents:
+                print("⚠ No alternate agents available")
+                continue
 
-                ticket.assigned_to = new_agent
-                db.commit()
-                db.refresh(ticket)
+            # 🔹 Find least loaded agent
+            agent_load = []
 
-                create_notification(
-                    db=db,
-                    user_id=new_agent,
-                    message=f"Ticket #{ticket.id} reassigned after delay.",
-                    type="escalation"
-                )
+            for agent in available_agents:
+                count = db.query(Ticket).filter(
+                    Ticket.assigned_to == agent.id,
+                    Ticket.status != "RESOLVED"
+                ).count()
+
+                agent_load.append((agent.id, count))
+
+            # 🔹 Select agent with minimum load
+            new_agent_id = min(agent_load, key=lambda x: x[1])[0]
+
+            # 🔁 Assign new agent
+            ticket.assigned_to = new_agent_id
+            ticket.updated_at = datetime.utcnow()
+
+            db.commit()
+            db.refresh(ticket)
+
+            # 🔔 Notify new agent
+            create_notification(
+                db=db,
+                user_id=new_agent_id,
+                message=f"⚠ Escalated Ticket #{ticket.id} assigned to you.",
+                type="escalation"
+            )
+
+            print(f"✅ Ticket {ticket.id} escalated to agent {new_agent_id}")

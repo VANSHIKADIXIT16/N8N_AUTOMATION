@@ -16,6 +16,7 @@ class User(Base):
     updated_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
+    customers = relationship("Customer")
     employee = relationship("Employee", back_populates="user")
     tickets = relationship("Ticket", back_populates="assigned_user")
     notifications = relationship("Notification", back_populates="user")
@@ -49,6 +50,7 @@ class Customer(Base):
     __tablename__ = "customers"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     name = Column(String)
     email = Column(String)
     phone = Column(String)
@@ -72,6 +74,7 @@ class Ticket(Base):
 
     customer = relationship("Customer", back_populates="tickets")
     assigned_user = relationship("User", back_populates="tickets")
+    messages = relationship("TicketMessage", back_populates="ticket")
 
 class TicketMessage(Base):
     __tablename__ = "ticket_messages"
@@ -82,7 +85,7 @@ class TicketMessage(Base):
     message = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    ticket = relationship("Ticket")
+    ticket = relationship("Ticket", back_populates="messages")
     
 class AIEvaluation(Base):
     __tablename__ = "ai_evaluations"
