@@ -3,7 +3,7 @@ from backend import models
 from backend.schemas.user_schema import UserCreate
 from datetime import datetime
 import hashlib
-from backend.models import User, Ticket, WorkflowExecution , Notification, TicketMessage
+from backend.models import User, Ticket, WorkflowExecution , Notification, TicketMessage , Customer
 from backend.schemas.user_schema import UserUpdate
 from backend.schemas.ticket_schema import TicketCreate
 from fastapi import HTTPException
@@ -97,6 +97,22 @@ def delete_user(db: Session, user_id: int):
     db.commit()
 
     return {"message": "User deleted successfully"}
+
+def create_customer(db, customer):
+    db_customer = Customer(
+        user_id=customer.user_id,
+        name=customer.name,
+        email=customer.email,
+        phone=customer.phone
+    )
+    db.add(db_customer)
+    db.commit()
+    db.refresh(db_customer)
+    return db_customer
+
+
+def get_customers(db):
+    return db.query(Customer).all()
 
 def create_ticket(db: Session, ticket: TicketCreate):
 

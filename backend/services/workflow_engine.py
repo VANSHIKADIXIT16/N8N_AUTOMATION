@@ -70,7 +70,8 @@ def process_ticket_workflow(db: Session, ticket_id: int, execution_id: int):
 
         # Update ticket
         ticket.priority = priority
-        ticket.status = "IN_PROGRESS"
+        if agent_id is not None:
+            ticket.status = "IN_PROGRESS"
         ticket.updated_at = datetime.utcnow()
 
         # Update workflow execution
