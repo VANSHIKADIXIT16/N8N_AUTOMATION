@@ -91,7 +91,13 @@ def calculate_score(skills: list, experience: int) -> float:
     required_matched = 0
 
     for skill in skills:
-        skill_type = skill["type"]
+        # Handle both dict (with type) and string (fallback)
+        if isinstance(skill, dict):
+            skill_type = skill.get("type", "optional")
+        elif isinstance(skill, str):
+            skill_type = "optional"
+        else:
+            continue
 
         if skill_type == "required":
             score += 20
@@ -129,7 +135,7 @@ import os.path
 import base64
 from email.message import EmailMessage
 
-SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
 
 def send_email_gmail(to_email: str, subject: str, content: str):
