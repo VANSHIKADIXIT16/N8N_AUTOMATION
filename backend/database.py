@@ -1,20 +1,18 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
+import os
 
-# 🔹 1. Database URL
-DATABASE_URL = "postgresql://postgres:rootadmin123@localhost:5432/workflow_db"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# 🔹 2. Create Engine
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 engine = create_engine(DATABASE_URL)
 
-# 🔹 3. Create Session
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# 🔹 4. Base class for models
 Base = declarative_base()
 
-# 🔹 5. Dependency to get DB session
 def get_db():
     db = SessionLocal()
     try:
