@@ -7,7 +7,7 @@ from typing import List
 from threading import Thread
 import time
 
-from models import Candidate, Complaint, Role, Skill
+from models import Candidate, Complaint, Role, Skill, User
 from database import engine, get_db, Base
 from utils import extract_text_from_pdf, extract_candidate_info, calculate_score, determine_status, route_complaint, send_email_gmail
 from fetch_emails import fetch_and_process_emails
@@ -17,8 +17,24 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
+
+# Import new routes and schemas
+from routes import notification_routes, ticket_routes, escalation_routes, dashboard_routes, customer_routes
+from schemas.user_schema import UserCreate, UserResponse
+import crud
+
 app = FastAPI(title="Resume Parsing & Complaint Routing System")
 
+# Include new routers
+app.include_router(notification_routes.router)
+app.include_router(ticket_routes.router)
+app.include_router(escalation_routes.router)
+app.include_router(dashboard_routes.router)
+app.include_router(customer_routes.router)
+# temp add
+import requests
+
+print(requests.get("https://www.google.com").status_code)
 # ✅ Background Email Worker
 def email_worker():
     while True:
@@ -26,7 +42,7 @@ def email_worker():
             print("📩 Checking for new emails...")
             fetch_and_process_emails()
         except Exception as e:
-            print("❌ Email fetch error:", e)
+            print("❌ Email fetch error:", str(e))
         time.sleep(60)  # check every 60 seconds
 
 # ✅ Start on backend startup
@@ -113,6 +129,10 @@ def get_skills(role_id: int, db: Session = Depends(get_db)):
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Resume Parsing & Complaint Routing System API"}
+
+@app.post("/users", response_model=UserResponse)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    return crud.create_user(db=db, user=user)
 
 @app.post("/upload_resume/")
 async def upload_resume(
