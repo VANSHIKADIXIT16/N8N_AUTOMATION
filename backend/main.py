@@ -20,12 +20,14 @@ from googleapiclient.discovery import build
 
 # Import new routes and schemas
 from routes import notification_routes, ticket_routes, escalation_routes, dashboard_routes, customer_routes
+from auth import auth_routes
 from schemas.user_schema import UserCreate, UserResponse
 import crud
 
 app = FastAPI(title="Resume Parsing & Complaint Routing System")
 
 # Include new routers
+app.include_router(auth_routes.router)
 app.include_router(notification_routes.router)
 app.include_router(ticket_routes.router)
 app.include_router(escalation_routes.router)
@@ -46,10 +48,10 @@ def email_worker():
         time.sleep(60)  # check every 60 seconds
 
 # ✅ Start on backend startup
-@app.on_event("startup")
-def start_email_listener():
-    thread = Thread(target=email_worker, daemon=True)
-    thread.start()
+# @app.on_event("startup")
+# def start_email_listener():
+#     thread = Thread(target=email_worker, daemon=True)
+#     thread.start()
 
 # Create tables
 Base.metadata.create_all(bind=engine)
