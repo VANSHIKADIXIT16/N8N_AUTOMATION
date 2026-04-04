@@ -16,18 +16,122 @@ import {
   ArrowUpRight,
   TrendingUp,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function CustomerServiceDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isNewTicketOpen, setIsNewTicketOpen] = useState(false);
+  const { toast } = useToast();
+
+  const [newTicket, setNewTicket] = useState({
+    title: "",
+    description: "",
+    category: "Technical",
+    customer_id: 1, // Default dummy customer
+  });
+
+  const agent_id = 1; // Current dummy agent
+
+  const fetchTickets = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`http://localhost:8003/tickets/assigned/${agent_id}`);
+      const data = await response.json();
+      setTickets(data);
+    } catch (error) {
+      console.error("Error fetching tickets:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch tickets from server.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  const handleResolve = async (ticketId: number) => {
+    try {
+      const response = await fetch(`http://localhost:8003/tickets/${ticketId}/resolve`, {
+        method: "PATCH",
+      });
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Ticket has been resolved.",
+        });
+        setSelectedTicket(null);
+        fetchTickets();
+      } else {
+        throw new Error("Failed to resolve ticket");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to resolve ticket.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateTicket = async () => {
+    try {
+      const response = await fetch("http://localhost:8003/tickets/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTicket),
+      });
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "New ticket created and routed successfully.",
+        });
+        setIsNewTicketOpen(false);
+        setNewTicket({ title: "", description: "", category: "Technical", customer_id: 1 });
+        fetchTickets();
+      } else {
+        throw new Error("Failed to create ticket");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create ticket.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const stats = [
-    { label: "Active Tickets", value: "42", icon: MessageSquare, color: "text-blue-600", bg: "bg-blue-100" },
+    { label: "Active Tickets", value: tickets.filter(t => t.status !== "RESOLVED").length.toString(), icon: MessageSquare, color: "text-blue-600", bg: "bg-blue-100" },
     { label: "Avg Response Time", value: "12m", icon: Clock, color: "text-purple-600", bg: "bg-purple-100" },
-    { label: "Resolved Today", value: "128", icon: CheckCircle, color: "text-green-600", bg: "bg-green-100" },
-    { label: "Urgent Issues", value: "5", icon: AlertCircle, color: "text-red-600", bg: "bg-red-100" },
+    { label: "Resolved Today", value: tickets.filter(t => t.status === "RESOLVED").length.toString(), icon: CheckCircle, color: "text-green-600", bg: "bg-green-100" },
+    { label: "Urgent Issues", value: tickets.filter(t => t.priority === "HIGH").length.toString(), icon: AlertCircle, color: "text-red-600", bg: "bg-red-100" },
   ];
 
   const tickets = [
@@ -231,33 +335,20 @@ export default function CustomerServiceDashboard() {
                   <div className="p-6 grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase">Customer ID</p>
-                      <p className="text-sm font-medium text-slate-900">{selectedTicket.details?.customerInfo.id || "N/A"}</p>
+                      <p className="text-sm font-medium text-slate-900">CUST-{selectedTicket.customer_id}</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase">Full Name</p>
-                      <p className="text-sm font-medium text-slate-900">{selectedTicket.details?.customerInfo.name || "N/A"}</p>
+                      <p className="text-sm font-medium text-slate-900">{selectedTicket.customer?.name || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase">Email Address</p>
-                      <p className="text-sm font-medium text-slate-900">{selectedTicket.details?.customerInfo.email || "N/A"}</p>
+                      <p className="text-sm font-medium text-slate-900">{selectedTicket.customer?.email || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase">Phone Number</p>
-                      <p className="text-sm font-medium text-slate-900">{selectedTicket.details?.customerInfo.phone || "N/A"}</p>
+                      <p className="text-sm font-medium text-slate-900">{selectedTicket.customer?.phone || "N/A"}</p>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase">Account Number</p>
-                      <p className="text-sm font-medium text-slate-900">{selectedTicket.details?.customerInfo.accountNumber || "N/A"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase">Customer Type</p>
-                      <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 uppercase">
-                        {selectedTicket.details?.customerInfo.type || "New"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="px-6 pb-4">
-                    <p className="text-[10px] text-slate-400 italic">These attributes help personalize and categorize support workflows.</p>
                   </div>
                 </div>
 
@@ -271,7 +362,7 @@ export default function CustomerServiceDashboard() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs font-semibold text-slate-500 uppercase">Ticket ID</p>
-                        <p className="text-sm font-medium text-slate-900">{selectedTicket.id}</p>
+                        <p className="text-sm font-medium text-slate-900">TKT-{selectedTicket.id}</p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-slate-500 uppercase">Status</p>
@@ -280,16 +371,16 @@ export default function CustomerServiceDashboard() {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase">Issue Title</p>
-                      <p className="text-sm font-medium text-secondary">{selectedTicket.subject}</p>
+                      <p className="text-sm font-medium text-secondary">{selectedTicket.title}</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase">Issue Description</p>
-                      <p className="text-sm text-slate-600 mt-1">{selectedTicket.details?.ticketInfo.description || "No detailed description available."}</p>
+                      <p className="text-sm text-slate-600 mt-1">{selectedTicket.description}</p>
                     </div>
                     <div className="grid grid-cols-3 gap-2 pt-2">
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
                         <p className="text-[10px] text-slate-400 uppercase">Category</p>
-                        <p className="text-xs font-bold text-secondary">{selectedTicket.details?.ticketInfo.category || "General"}</p>
+                        <p className="text-xs font-bold text-secondary">{selectedTicket.category || "General"}</p>
                       </div>
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
                         <p className="text-[10px] text-slate-400 uppercase">Priority</p>
@@ -297,7 +388,7 @@ export default function CustomerServiceDashboard() {
                       </div>
                       <div className="p-2 bg-slate-50 rounded-lg border border-slate-100">
                         <p className="text-[10px] text-slate-400 uppercase">Created</p>
-                        <p className="text-[10px] font-bold text-secondary">{selectedTicket.details?.ticketInfo.createdDate || "N/A"}</p>
+                        <p className="text-[10px] font-bold text-secondary">{new Date(selectedTicket.created_at).toLocaleDateString()}</p>
                       </div>
                     </div>
                   </div>
@@ -313,19 +404,11 @@ export default function CustomerServiceDashboard() {
                     <div className="space-y-4">
                       <div>
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">AI Intent Classification</p>
-                        <p className="text-sm font-bold text-primary">{selectedTicket.details?.aiAttributes.intent || "Unknown"}</p>
+                        <p className="text-sm font-bold text-primary">{selectedTicket.category || "Unknown"}</p>
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">AI Priority Suggestion</p>
-                        <p className="text-sm font-bold text-slate-900">{selectedTicket.details?.aiAttributes.prioritySuggestion || "N/A"}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sentiment Score</p>
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          selectedTicket.details?.aiAttributes.sentiment === "Negative" ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
-                        }`}>
-                          {selectedTicket.details?.aiAttributes.sentiment || "Neutral"}
-                        </span>
+                        <p className="text-sm font-bold text-slate-900">{selectedTicket.priority || "N/A"}</p>
                       </div>
                     </div>
                     <div className="space-y-4">
@@ -333,14 +416,14 @@ export default function CustomerServiceDashboard() {
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">AI Confidence Score</p>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-1.5 bg-slate-100 rounded-full">
-                            <div className="h-full bg-primary rounded-full" style={{ width: selectedTicket.details?.aiAttributes.confidenceScore || "0%" }} />
+                            <div className="h-full bg-primary rounded-full" style={{ width: "92%" }} />
                           </div>
-                          <span className="text-xs font-bold text-slate-700">{selectedTicket.details?.aiAttributes.confidenceScore || "N/A"}</span>
+                          <span className="text-xs font-bold text-slate-700">92%</span>
                         </div>
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Auto-Response Generated</p>
-                        <p className="text-sm font-medium text-slate-900">{selectedTicket.details?.aiAttributes.autoResponse || "No"}</p>
+                        <p className="text-sm font-medium text-slate-900">Yes</p>
                       </div>
                     </div>
                   </div>
@@ -360,23 +443,23 @@ export default function CustomerServiceDashboard() {
                   <div className="p-6 grid grid-cols-2 gap-x-8 gap-y-4">
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase">Workflow Status</p>
-                      <p className="text-sm font-bold text-accent">{selectedTicket.details?.workflowTracking.status || "Pending"}</p>
+                      <p className="text-sm font-bold text-accent">COMPLETED</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase">SLA Timer</p>
-                      <p className="text-sm font-medium text-red-600">{selectedTicket.details?.workflowTracking.slaTimer || "N/A"}</p>
+                      <p className="text-sm font-medium text-red-600">32m remaining</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase">Escalation Level</p>
-                      <p className="text-sm font-medium text-slate-900">{selectedTicket.details?.workflowTracking.escalationLevel || "None"}</p>
+                      <p className="text-sm font-medium text-slate-900">None</p>
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-slate-500 uppercase">Assigned Agent</p>
-                      <p className="text-sm font-medium text-slate-900">{selectedTicket.details?.workflowTracking.assignedAgent || "Unassigned"}</p>
+                      <p className="text-sm font-medium text-slate-900">CS Support Specialist</p>
                     </div>
                     <div className="col-span-2 flex items-center justify-between p-3 bg-slate-50 rounded-lg mt-2">
                       <span className="text-xs text-slate-600">Auto-Notification Sent:</span>
-                      <span className="text-xs font-bold text-green-600">{selectedTicket.details?.workflowTracking.autoNotification || "No"}</span>
+                      <span className="text-xs font-bold text-green-600">Yes</span>
                     </div>
                   </div>
                 </div>
@@ -384,8 +467,8 @@ export default function CustomerServiceDashboard() {
 
               <div className="mt-8 flex justify-end gap-3">
                 <Button variant="outline">Escalate to Tier 3</Button>
-                <Button className="gap-2">
-                  <MessageSquare className="w-4 h-4" /> Send Reply
+                <Button className="gap-2" onClick={() => handleResolve(selectedTicket.id)}>
+                  <CheckCircle className="w-4 h-4" /> Resolve Ticket
                 </Button>
               </div>
             </div>
@@ -404,7 +487,7 @@ export default function CustomerServiceDashboard() {
                   <Button variant="outline" className="gap-2">
                     <Filter className="w-4 h-4" /> Filter
                   </Button>
-                  <Button className="gap-2">
+                  <Button className="gap-2" onClick={() => setIsNewTicketOpen(true)}>
                     <MessageSquare className="w-4 h-4" /> New Ticket
                   </Button>
                 </div>
@@ -443,54 +526,57 @@ export default function CustomerServiceDashboard() {
                         <Button variant="ghost" size="sm" className="text-primary" onClick={() => setActiveTab("My Tickets")}>View All</Button>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                          <thead>
-                            <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                              <th className="px-6 py-4 font-semibold">Ticket & Customer</th>
-                              <th className="px-6 py-4 font-semibold">Priority</th>
-                              <th className="px-6 py-4 font-semibold">Status</th>
-                              <th className="px-6 py-4 font-semibold">AI Tool</th>
-                              <th className="px-6 py-4 font-semibold text-right">Action</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {tickets.map((ticket) => (
-                              <tr key={ticket.id} className="hover:bg-slate-50 transition">
-                                <td className="px-6 py-4">
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-secondary">{ticket.id}</span>
-                                    <span className="text-xs text-slate-500">{ticket.customer}</span>
-                                    <span className="text-xs text-slate-400 mt-1 line-clamp-1">{ticket.subject}</span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                    ticket.priority === "Critical" ? "bg-red-100 text-red-700" :
-                                    ticket.priority === "High" ? "bg-orange-100 text-orange-700" :
-                                    "bg-blue-100 text-blue-700"
-                                  }`}>
-                                    {ticket.priority}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 text-xs font-medium text-slate-700">
-                                  {ticket.status}
-                                </td>
-                                <td className="px-6 py-4">
-                                  {ticket.aiSuggested ? (
+                        {loading ? (
+                          <div className="p-12 text-center text-slate-500">Loading tickets...</div>
+                        ) : tickets.length === 0 ? (
+                          <div className="p-12 text-center text-slate-500">No active tickets found.</div>
+                        ) : (
+                          <table className="w-full text-left">
+                            <thead>
+                              <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                <th className="px-6 py-4 font-semibold">Ticket & Customer</th>
+                                <th className="px-6 py-4 font-semibold">Priority</th>
+                                <th className="px-6 py-4 font-semibold">Status</th>
+                                <th className="px-6 py-4 font-semibold">AI Tool</th>
+                                <th className="px-6 py-4 font-semibold text-right">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {tickets.map((ticket) => (
+                                <tr key={ticket.id} className="hover:bg-slate-50 transition">
+                                  <td className="px-6 py-4">
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-bold text-secondary">TKT-{ticket.id}</span>
+                                      <span className="text-xs text-slate-500">{ticket.customer?.name || "Customer #"+ticket.customer_id}</span>
+                                      <span className="text-xs text-slate-400 mt-1 line-clamp-1">{ticket.title}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                      ticket.priority === "CRITICAL" ? "bg-red-100 text-red-700" :
+                                      ticket.priority === "HIGH" ? "bg-orange-100 text-orange-700" :
+                                      ticket.priority === "MEDIUM" ? "bg-yellow-100 text-yellow-700" :
+                                      "bg-blue-100 text-blue-700"
+                                    }`}>
+                                      {ticket.priority}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-xs font-medium text-slate-700">
+                                    {ticket.status}
+                                  </td>
+                                  <td className="px-6 py-4">
                                     <span className="flex items-center gap-1.5 text-xs text-primary font-medium">
                                       <Zap className="w-3 h-3" /> Ready
                                     </span>
-                                  ) : (
-                                    <span className="text-xs text-slate-400">-</span>
-                                  )}
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                  <Button size="sm" variant="ghost" onClick={() => setSelectedTicket(ticket)}>Detail</Button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                                  </td>
+                                  <td className="px-6 py-4 text-right">
+                                    <Button size="sm" variant="ghost" onClick={() => setSelectedTicket(ticket)}>Detail</Button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
                       </div>
                     </div>
 
@@ -557,6 +643,58 @@ export default function CustomerServiceDashboard() {
           )}
         </main>
       </div>
+
+      <Dialog open={isNewTicketOpen} onOpenChange={setIsNewTicketOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Support Ticket</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Issue Title</Label>
+              <Input
+                id="title"
+                value={newTicket.title}
+                onChange={(e) => setNewTicket({ ...newTicket, title: e.target.value })}
+                placeholder="e.g. Cannot access dashboard"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="category">Category</Label>
+              <Select
+                value={newTicket.category}
+                onValueChange={(value) => setNewTicket({ ...newTicket, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Technical">Technical</SelectItem>
+                  <SelectItem value="Billing">Billing</SelectItem>
+                  <SelectItem value="General">General</SelectItem>
+                  <SelectItem value="Feature Request">Feature Request</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Detailed Description</Label>
+              <Textarea
+                id="description"
+                value={newTicket.description}
+                onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
+                placeholder="Please provide as much detail as possible..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewTicketOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateTicket} disabled={!newTicket.title || !newTicket.description}>
+              Create & Route Ticket
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

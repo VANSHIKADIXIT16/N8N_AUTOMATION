@@ -39,10 +39,10 @@ print(requests.get("https://www.google.com").status_code)
 def email_worker():
     while True:
         try:
-            print("📩 Checking for new emails...")
+            print("Checking for new emails...")
             fetch_and_process_emails()
         except Exception as e:
-            print("❌ Email fetch error:", str(e))
+            print("Email fetch error:", str(e))
         time.sleep(60)  # check every 60 seconds
 
 # ✅ Start on backend startup
