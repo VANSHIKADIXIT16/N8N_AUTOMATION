@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from models import Ticket, User
-from services.notification_service import create_notification
+from backend.models import Ticket, User
+from backend.services.notification_service import create_notification
 
 
 def check_ticket_escalations(db: Session):

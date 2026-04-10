@@ -1,13 +1,14 @@
 from sqlalchemy.orm import Session
-import models
-from schemas.user_schema import UserCreate
+from backend import models
+import backend.models
+from backend.schemas.user_schema import UserCreate
 from datetime import datetime
 import hashlib
-from models import User, Ticket, WorkflowExecution , Notification, TicketMessage , Customer
-from schemas.user_schema import UserUpdate
-from schemas.ticket_schema import TicketCreate
+from backend.models import User, Ticket, WorkflowExecution , Notification, TicketMessage , Customer
+from backend.schemas.user_schema import UserUpdate
+from backend.schemas.ticket_schema import TicketCreate
 from fastapi import HTTPException
-from services.workflow_engine import process_ticket_workflow
+from backend.services.workflow_engine import process_ticket_workflow
 
 
 def hash_password(password: str) -> str:

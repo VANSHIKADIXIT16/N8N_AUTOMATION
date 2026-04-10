@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from database import get_db
-import crud
-from schemas.customer_schema import CustomerCreate
+from backend.database import get_db
+import backend.crud as crud
+from backend.schemas.customer_schema import CustomerCreate
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
 

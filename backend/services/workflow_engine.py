@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from models import Ticket, WorkflowExecution, AIEvaluation
+from backend.models import Ticket, WorkflowExecution, AIEvaluation
 from datetime import datetime
-from services.notification_service import create_notification
+from backend.services.notification_service import create_notification
 
 
 def process_ticket_workflow(db: Session, ticket_id: int, execution_id: int):
