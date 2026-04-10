@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from database import get_db
-from schemas.ticket_schema import TicketCreate, TicketResponse
-from schemas.ticket_message_schema import TicketMessageCreate, TicketMessageResponse
-import crud
-from models import Ticket
-from services.notification_service import create_notification
+from backend.database import get_db
+from backend.schemas.ticket_schema import TicketCreate, TicketResponse
+from backend.schemas.ticket_message_schema import TicketMessageCreate, TicketMessageResponse
+import backend.crud
+from backend.models import Ticket
+from backend.services.notification_service import create_notification
 
 router = APIRouter(prefix="/tickets", tags=["Tickets"])
 

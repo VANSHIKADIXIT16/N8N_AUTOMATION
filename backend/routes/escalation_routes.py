@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from database import get_db
-from services.escalation_service import check_ticket_escalations
+from backend.database import get_db
+from backend.services.escalation_service import check_ticket_escalations
 
 router = APIRouter(prefix="/escalations", tags=["Escalations"])
 

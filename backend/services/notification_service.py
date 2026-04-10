@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models import Notification
+from backend.models import Notification
 from datetime import datetime
 
 
