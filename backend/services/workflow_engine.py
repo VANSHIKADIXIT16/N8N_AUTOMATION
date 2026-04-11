@@ -1,102 +1,53 @@
 from sqlalchemy.orm import Session
-from models import Ticket, WorkflowExecution, AIEvaluation
+from backend.models import Ticket, WorkflowExecution
 from datetime import datetime
-from services.notification_service import create_notification
-
+from backend.services.n8n_service import trigger_n8n_workflow
 
 def process_ticket_workflow(db: Session, ticket_id: int, execution_id: int):
-
     try:
-
         # Get ticket
         ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
         if not ticket:
             raise Exception("Ticket not found")
             
-        description = ticket.description.lower()
+        # ✅ TRIGGER N8N WORKFLOW (Replaces local automation logic)
+        n8n_data = {
+            "event": "ticket_created",
+            "ticket_id": ticket.id,
+            "title": ticket.title,
+            "description": ticket.description,
+            "category": ticket.category,
+            "customer_id": ticket.customer_id
+        }
+        
+        trigger_n8n_workflow(n8n_data)
 
-        # Simple AI logic
-        if "urgent" in description:
-            priority = "HIGH"
-            sentiment = "negative"
-
-        elif "refund" in description:
-            priority = "MEDIUM"
-            sentiment = "neutral"
-
-        else:
-            priority = "LOW"
-            sentiment = "positive"
-
-        # Save AI evaluation
-        ai_eval = AIEvaluation(
-            related_type="ticket",
-            related_id=ticket_id,
-            ai_score=priority,
-            classification="support_ticket",
-            sentiment=sentiment,
-            confidence="0.90",
-            created_at=datetime.utcnow()
-        )
-
-        db.add(ai_eval)
-
-        # ROUTE TICKET
-        department = route_ticket(ticket)
-        ticket.department = department
-
-
-        agent_id = assign_agent(db, department)
-
-        if agent_id is not None:
-            ticket.assigned_to = agent_id
-            ticket.status = "IN_PROGRESS"
-            create_notification(
-                db,
-                agent_id,
-                f"New ticket assigned: {ticket.title}"
-            )
-        else:
-            ticket.assigned_to = None
-            ticket.status = "OPEN"
-            print("⚠ No agent available. Ticket added to queue.")
-
-        print(f"Agent assigned: {agent_id}")
-
-        # Simulated notification
-        print("📩 Notification Sent")
-        print(f"Ticket {ticket_id} assigned to user {ticket.assigned_to}")
-        print(f"📌 Routed to department: {department}")
-
-        # Update ticket
-        ticket.priority = priority
-        if agent_id is not None:
-            ticket.status = "IN_PROGRESS"
-        ticket.updated_at = datetime.utcnow()
-
-        # Update workflow execution
+        # Update workflow execution status
         execution = db.query(WorkflowExecution).filter(
             WorkflowExecution.id == execution_id
         ).first()
 
-        execution.status = "COMPLETED"
-        execution.completed_at = datetime.utcnow()
+        if execution:
+            execution.status = "COMPLETED"
+            execution.completed_at = datetime.utcnow()
 
         db.commit()
+        print(f"✅ Ticket {ticket_id} processed via n8n workflow")
 
     except Exception as e:
-
+        print(f"❌ Workflow error: {str(e)}")
         execution = db.query(WorkflowExecution).filter(
             WorkflowExecution.id == execution_id
         ).first()
 
-        execution.status = "FAILED"
-        execution.error_message = str(e)
-        execution.completed_at = datetime.utcnow()
+        if execution:
+            execution.status = "FAILED"
+            execution.error_message = str(e)
+            execution.completed_at = datetime.utcnow()
 
         db.commit()
 
-def route_ticket(ticket):
+# ... (rest of the file can be cleaned up or removed if no longer used)
 
     text = (ticket.title + " " + ticket.description).lower()
 

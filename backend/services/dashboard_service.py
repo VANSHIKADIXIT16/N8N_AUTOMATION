@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, date
-from models import Ticket, User, TicketMessage
+from backend.models import Ticket, User, TicketMessage
 
 
 # 🔹 Top Cards (Matches your UI)

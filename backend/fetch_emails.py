@@ -5,10 +5,10 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
-from database import SessionLocal
-from models import Candidate, Role
+from backend.database import SessionLocal
+from backend.models import Candidate, Role
 
-from utils import (
+from backend.utils import (
     extract_text_from_pdf,
     extract_candidate_info,
     calculate_score,
@@ -21,23 +21,33 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
+# ✅ NEW: Proper file paths (FIXED)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+CREDENTIALS_PATH = os.path.join(BASE_DIR, "credentials.json")
+TOKEN_PATH = os.path.join(BASE_DIR, "token.json")
+
 # =========================
 # ✅ GMAIL CONNECTION
 # =========================
 def get_gmail_service():
     creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+
+    # ✅ FIXED PATH
+    if os.path.exists(TOKEN_PATH):
+        creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
+            # ✅ FIXED PATH
             flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES
+                CREDENTIALS_PATH, SCOPES
             )
             creds = flow.run_local_server(port=8080)
-        with open('token.json', 'w') as token:
+
+        # ✅ FIXED PATH
+        with open(TOKEN_PATH, 'w') as token:
             token.write(creds.to_json())
 
     return build('gmail', 'v1', credentials=creds)
@@ -52,28 +62,24 @@ def fetch_and_process_emails():
     try:
         service = get_gmail_service()
 
-        # For testing, use only 'is:unread'; you can add 'newer_than:1d' later
-        # results = service.users().messages().list(
-        # userId='me',
-        #     q='has:attachment filename:pdf'  # Fetch all emails with PDF attachments
-        # ).execute()
         results = service.users().messages().list(
-    userId='me',
-        maxResults=10
-    ).execute()
+            userId='me',
+            maxResults=10
+        ).execute()
 
         messages = results.get('messages', [])
         print(f"📬 Emails fetched: {len(messages)}")
         print("DEBUG: Raw results from Gmail API:", results)
+
         if 'messages' in results:
-             print("Message IDs:", [m['id'] for m in results['messages']])
+            print("Message IDs:", [m['id'] for m in results['messages']])
+
         if not messages:
             print("⚠️ No new unread emails found.")
             return
 
         db = SessionLocal()
 
-        # Recursive function to extract all parts (PDF attachments etc.)
         def get_parts(payload):
             parts = []
             if 'parts' in payload:
@@ -110,7 +116,7 @@ def fetch_and_process_emails():
                 parts = get_parts(payload)
 
                 found_pdf = False
-        
+
                 for part in parts:
                     filename = part.get('filename')
                     if filename and filename.lower().endswith('.pdf'):
@@ -164,7 +170,6 @@ def fetch_and_process_emails():
                 if not found_pdf:
                     print("⚠️ No PDF attachments found in email.")
 
-                # Mark message as read
                 service.users().messages().modify(
                     userId='me',
                     id=msg['id'],
@@ -181,15 +186,15 @@ def fetch_and_process_emails():
         print("❌ Email fetch error:", e)
 
 # =========================
-# ✅ START BACKGROUND SCHEDULER (1 MINUTE INTERVAL)
+# ✅ START BACKGROUND SCHEDULER (SAFE FIX)
 # =========================
 scheduler = None
 
 def start_email_scheduler():
     global scheduler
-    if scheduler is None:
+    # ✅ FIXED: prevent duplicate schedulers
+    if scheduler is None or not scheduler.running:
         scheduler = BackgroundScheduler()
-        # Run fetch_and_process_emails every 1 minute
         scheduler.add_job(fetch_and_process_emails, 'interval', minutes=1)
         scheduler.start()
         print("⏱ Email fetch scheduler started (runs every 1 minute)")
