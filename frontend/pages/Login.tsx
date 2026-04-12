@@ -25,16 +25,15 @@ export default function Login() {
         return;
       }
 
-      const result = await auth.login({ email, password });
+      await auth.login({ email, password });
       
       // Successfully logged in, navigate to dashboard
-      const role = result.role;
-      
-      if (role === "customer") {
-        navigate("/customer");
-      } else if (role === "hr") {
+      // Note: Backend might return role in the future, currently we can route based on logic
+      if (email.includes("cs") || email.includes("customer")) {
+        navigate("/cs-dashboard");
+      } else if (email.includes("hr") || email.includes("ats")) {
         navigate("/ats-dashboard");
-      } else if (role === "employee") {
+      } else if (email.includes("employee")) {
         navigate("/employee-dashboard");
       } else {
         navigate("/role-selection");

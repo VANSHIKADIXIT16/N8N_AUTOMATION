@@ -11,8 +11,9 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import RoleSelection from "./pages/RoleSelection";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
+import CustomerServiceDashboard from "./pages/CustomerServiceDashboard";
 import ATSDashboard from "./pages/ATSDashboard";
-import CustomerDashboard from "./pages/CustomerDashboard/index";
+import ComplaintsDashboard from "./pages/ComplaintsDashboard";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -23,7 +24,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
@@ -31,9 +32,10 @@ const App = () => (
           
           <Route element={<ProtectedRoute />}>
             <Route path="/role-selection" element={<RoleSelection />} />
-            <Route path="/customer/*" element={<CustomerDashboard />} />
+            <Route path="/cs-dashboard" element={<CustomerServiceDashboard />} />
             <Route path="/employee-dashboard" element={<EmployeeDashboard />} />
             <Route path="/ats-dashboard" element={<ATSDashboard />} />
+            <Route path="/complaints-dashboard" element={<ComplaintsDashboard />} />
           </Route>
           
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
@@ -45,3 +47,5 @@ const App = () => (
 );
 
 createRoot(document.getElementById("root")!).render(<App />);
+
+export default App;

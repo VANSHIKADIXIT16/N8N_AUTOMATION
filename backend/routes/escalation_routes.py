@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from backend.database import get_db
-from backend.services.escalation_service import check_ticket_escalations
+from backend.services.escalation_service import escalate_ticket
 
 router = APIRouter(prefix="/escalations", tags=["Escalations"])
 
@@ -9,6 +9,6 @@ router = APIRouter(prefix="/escalations", tags=["Escalations"])
 @router.post("/check")
 def run_escalation_check(db: Session = Depends(get_db)):
 
-    check_ticket_escalations(db)
+    escalate_ticket(db)
 
     return {"message": "Escalation check completed"}

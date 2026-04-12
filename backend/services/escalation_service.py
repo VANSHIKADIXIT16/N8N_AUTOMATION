@@ -4,7 +4,7 @@ from backend.models import Ticket, User
 from backend.services.notification_service import create_notification
 
 
-def check_ticket_escalations(db: Session):
+def escalate_ticket(db: Session):
 
     tickets = db.query(Ticket).filter(Ticket.status != "RESOLVED").all()
 

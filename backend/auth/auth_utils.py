@@ -9,12 +9,23 @@ ALGORITHM = "HS256"
 
 # ✅ SAME hashing as CRUD (VERY IMPORTANT)
 def hash_password(password: str):
-    return hashlib.sha256(password.encode()).hexdigest()
+    return pwd_context.hash(password)
 
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain, hashed):
-    return hashlib.sha256(plain.encode()).hexdigest() == hashed
+    # Try bcrypt first
+    try:
+        if pwd_context.verify(plain, hashed):
+            return True
+    except:
+        pass
 
+    # Fallback to SHA256
+    sha256_hash = hashlib.sha256(plain.encode()).hexdigest()
+    return sha256_hash == hashed
 
 # ✅ JWT Token
 def create_access_token(data: dict):

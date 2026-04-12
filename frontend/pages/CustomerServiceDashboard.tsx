@@ -36,8 +36,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { auth } from "@/lib/auth";
+import { useNavigate } from "react-router-dom";
 
 export default function CustomerServiceDashboard() {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
@@ -198,7 +200,7 @@ export default function CustomerServiceDashboard() {
           </div>
 
           <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">
-            Queue Management
+            Support Operations
           </h2>
           <nav className="space-y-1 mb-8">
             {[
@@ -223,6 +225,19 @@ export default function CustomerServiceDashboard() {
                 {item.label}
               </button>
             ))}
+          </nav>
+
+          <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-4">
+            Escalations
+          </h2>
+          <nav className="space-y-1 mb-8">
+            <button
+              onClick={() => navigate("/complaints-dashboard")}
+              className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 transition"
+            >
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              Complaints Workflow
+            </button>
           </nav>
 
           <div className="mt-auto pt-6">

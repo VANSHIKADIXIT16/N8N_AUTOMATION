@@ -8,6 +8,7 @@ export default defineConfig({
     host: "::",
     port: 8080,
     fs: {
+      
       allow: ["."],
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**"],
     },

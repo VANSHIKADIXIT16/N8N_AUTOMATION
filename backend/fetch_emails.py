@@ -1,11 +1,19 @@
 import os
 import base64
+import re
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
 from backend.database import SessionLocal
+from backend.models import User
+
+db = SessionLocal()
+users = db.query(User).all()
+
+for u in users:
+    print(u.email, u.password_hash)
 from backend.models import Candidate, Role
 
 from backend.utils import (
@@ -13,7 +21,8 @@ from backend.utils import (
     extract_candidate_info,
     calculate_score,
     determine_status,
-    send_email_gmail
+    send_email_gmail,
+    EMAIL_REGEX
 )
 
 # ✅ Scheduler
@@ -112,6 +121,15 @@ def fetch_and_process_emails():
                 for h in headers:
                     if h['name'] == 'From':
                         sender = h['value']
+                        # Extract email from "Name <email@...>" format if present
+                        email_match = re.search(r'<(.*?)>', sender)
+                        if email_match:
+                            sender = email_match.group(1)
+                        else:
+                            # Fallback to regex if no brackets
+                            email_match = re.search(EMAIL_REGEX, sender)
+                            if email_match:
+                                sender = email_match.group(0)
 
                 parts = get_parts(payload)
 

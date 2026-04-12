@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Zap,
   Users,
   Briefcase,
-  FileText,
   ArrowRight,
   MessageSquare,
+  FileText,
 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function RoleSelection() {
   const navigate = useNavigate();
@@ -23,13 +24,16 @@ export default function RoleSelection() {
       // Navigate based on selected role
       switch (selectedRole) {
         case "customer-service":
-          navigate("/customer");
+          navigate("/cs-dashboard");
           break;
         case "employee":
           navigate("/employee-dashboard");
           break;
         case "hr":
           navigate("/ats-dashboard");
+          break;
+        case "complaints":
+          navigate("/complaints-dashboard");
           break;
       }
     } finally {
@@ -57,12 +61,12 @@ export default function RoleSelection() {
     },
     {
       id: "customer-service",
-      title: "Customer Service",
+      title: "Customer & Complaints Support",
       icon: MessageSquare,
       description:
-        "Manage support tickets, customer queries, and AI-assisted responses",
+        "Manage support tickets, customer complaints, and AI-assisted responses",
       features: [
-        "Ticket queue management",
+        "Ticket & Complaint queue management",
         "AI-suggested response review",
         "Customer satisfaction tracking",
         "SLA monitoring & alerts",
@@ -77,14 +81,14 @@ export default function RoleSelection() {
       id: "employee",
       title: "Employee",
       icon: Users,
-      description: "Complete onboarding tasks and manage your workflow",
+      description: "View your personal profile, tasks, and company resources",
       features: [
-        "View onboarding progress",
-        "Assigned task management",
-        "Document uploads",
-        "Workflow notifications",
         "Personal profile management",
-        "Progress tracking",
+        "Task list & deadline tracking",
+        "Company announcement feed",
+        "Internal resource library",
+        "Peer communication tools",
+        "Performance self-tracking",
       ],
       color: "from-purple-50 to-purple-100",
       borderColor: "border-purple-200",
@@ -93,112 +97,78 @@ export default function RoleSelection() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
-      {/* Header */}
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-secondary">WorkflowAI</span>
-          </Link>
-          <div className="text-slate-600">Select Your Role</div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-secondary mb-4">
-            Choose Your Role
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+      <div className="max-w-5xl w-full space-y-8">
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center p-2 bg-blue-100 text-blue-700 rounded-full mb-4">
+            <Zap className="w-5 h-5 mr-2 fill-current" />
+            <span className="text-sm font-bold tracking-wider uppercase">AI Automation</span>
+          </div>
+          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
+            Choose Your Workspace
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Select the role that best describes your position to access your
-            personalized dashboard
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+            Select the interface tailored to your specific role and responsibilities.
           </p>
         </div>
 
-        {/* Role Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          {roles.map((role) => (
-            <button
-              key={role.id}
-              onClick={() => setSelectedRole(role.id)}
-              className={`p-8 rounded-xl border-2 transition-all text-left ${
-                selectedRole === role.id
-                  ? `${role.borderColor} bg-gradient-to-br ${role.color} shadow-lg border-current`
-                  : `border-slate-200 bg-white hover:border-slate-300 hover:shadow-md`
-              }`}
-            >
-              <div
-                className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${role.accentColor}`}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+          {roles.map((role) => {
+            const Icon = role.icon;
+            const isSelected = selectedRole === role.id;
+
+            return (
+              <Card
+                key={role.id}
+                className={`cursor-pointer transition-all duration-300 border-2 relative overflow-hidden ${
+                  isSelected
+                    ? `${role.borderColor} shadow-lg scale-105 z-10`
+                    : "border-transparent hover:border-slate-200 hover:shadow-md"
+                }`}
+                onClick={() => setSelectedRole(role.id)}
               >
-                <role.icon className="w-6 h-6 text-slate-700" />
-              </div>
-
-              <h3 className="text-xl font-semibold text-secondary mb-2">
-                {role.title}
-              </h3>
-              <p className="text-slate-600 text-sm mb-6">{role.description}</p>
-
-              <div className="space-y-2 pt-4 border-t border-slate-200">
-                {role.features.map((feature, idx) => (
-                  <div key={idx} className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 mt-1.5" />
-                    <span className="text-sm text-slate-700">{feature}</span>
+                <div className={`absolute top-0 right-0 p-3 ${isSelected ? "opacity-100" : "opacity-0"} transition-opacity`}>
+                  <div className={`w-6 h-6 rounded-full ${role.accentColor} flex items-center justify-center`}>
+                    <Zap className="w-3 h-3 text-blue-600" />
                   </div>
-                ))}
-              </div>
-
-              {selectedRole === role.id && (
-                <div className="mt-6 p-3 bg-primary/10 rounded-lg flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                    <div className="w-2.5 h-2.5 rounded-full bg-white" />
-                  </div>
-                  <span className="text-sm font-medium text-primary">
-                    Selected
-                  </span>
                 </div>
-              )}
-            </button>
-          ))}
+
+                <CardHeader className={`bg-gradient-to-br ${role.color} border-b`}>
+                  <div className={`w-12 h-12 rounded-xl ${role.accentColor} flex items-center justify-center mb-2`}>
+                    <Icon className="w-6 h-6 text-slate-700" />
+                  </div>
+                  <CardTitle className="text-xl font-bold">{role.title}</CardTitle>
+                  <CardDescription className="text-slate-600 font-medium">
+                    {role.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <ul className="space-y-2 mb-6">
+                    {role.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start text-sm text-slate-600">
+                        <ArrowRight className="w-4 h-4 mr-2 text-slate-400 flex-shrink-0 mt-0.5" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
-        {/* Continue Button */}
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center mt-12 space-y-4">
           <Button
-            onClick={handleContinue}
-            disabled={!selectedRole || isLoading}
             size="lg"
-            className="gap-2 px-8"
+            className="px-12 py-6 text-lg font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300"
+            disabled={!selectedRole || isLoading}
+            onClick={handleContinue}
           >
-            Continue to Dashboard{" "}
-            {!isLoading && <ArrowRight className="w-4 h-4" />}
+            {isLoading ? "Loading..." : "Enter Workspace"}
           </Button>
-          <p className="text-slate-600 text-sm">
-            You can change your role anytime in settings
+          <p className="text-sm text-slate-400">
+            You can switch between workspaces later from your dashboard.
           </p>
-        </div>
-
-        {/* Demo Information */}
-        <div className="mt-16 p-6 bg-slate-50 rounded-xl border border-slate-200">
-          <h3 className="font-semibold text-slate-900 mb-3">Demo Mode</h3>
-          <p className="text-slate-700 text-sm mb-4">
-            This is a demonstration application showcasing a role-based workflow
-            automation platform. Each role has a unique dashboard with
-            appropriate features and permissions.
-          </p>
-          <ul className="space-y-2 text-sm text-slate-600">
-            <li>
-              <strong>Customer Service:</strong> Manage support tickets, track
-              SLA, and use AI-suggested responses
-            </li>
-            <li>
-              <strong>Employee:</strong> Track onboarding progress and assigned
-              tasks
-            </li>
-          </ul>
         </div>
       </div>
     </div>

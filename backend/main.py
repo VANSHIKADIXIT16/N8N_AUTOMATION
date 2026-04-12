@@ -1,6 +1,18 @@
-from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, Response
-from fastapi.responses import FileResponse
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+# ✅ CREATE APP FIRST (TOP PRIORITY)
+app = FastAPI(title="AI Workflow Automation System 🚀")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+from fastapi import UploadFile, File, Form, Depends, HTTPException, Response
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List
@@ -9,6 +21,7 @@ import time
 import os
 import json
 import requests
+
 
 # ✅ DB + MODELS
 from backend.database import engine, get_db
@@ -46,6 +59,7 @@ from backend.utils import (
 from backend.fetch_emails import fetch_and_process_emails
 from backend.auth.auth_utils import require_user
 from backend.services.n8n_service import trigger_n8n_workflow
+
 
 # ---------------- APP ---------------- #
 app = FastAPI(title="AI Workflow Automation System 🚀")
@@ -296,3 +310,4 @@ def get_customer_complaints(db: Session = Depends(get_db), user=Depends(require_
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
     return Response(status_code=204)
+

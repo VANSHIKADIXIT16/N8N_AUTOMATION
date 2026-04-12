@@ -138,10 +138,17 @@ from email.message import EmailMessage
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TOKEN_PATH = os.path.join(BASE_DIR, "token.json")
+
 def send_email_gmail(to_email: str, subject: str, content: str):
+    if not to_email or to_email == "N/A" or "@" not in to_email:
+        print(f"⚠️ Invalid recipient email address: {to_email}. Skipping send.")
+        return False
+
     creds = None
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    if os.path.exists(TOKEN_PATH):
+        creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:

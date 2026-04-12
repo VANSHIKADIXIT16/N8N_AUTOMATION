@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   Table,
@@ -10,6 +9,8 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
+import { triggerComplaintWorkflow } from "../shared/api";
+import { Button } from "@/components/ui/button";
 
 interface Complaint {
   id: number;
@@ -19,9 +20,10 @@ interface Complaint {
   department: string;
 }
 
-const ComplaintsDashboard = () => {
+export default function ComplaintsDashboard() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
+  const [triggerLoading, setTriggerLoading] = useState(false);
 
   const fetchComplaints = async () => {
     setLoading(true);
@@ -36,20 +38,47 @@ const ComplaintsDashboard = () => {
     }
   };
 
+  const handleTriggerWorkflow = async () => {
+    setTriggerLoading(true);
+    try {
+      await triggerComplaintWorkflow({
+        issue: "Manual trigger from dashboard",
+      });
+      alert("Workflow triggered successfully via n8n!");
+    } catch (err) {
+      console.error(err);
+      alert("Error triggering workflow");
+    } finally {
+      setTriggerLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchComplaints();
   }, []);
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Complaints Dashboard</h1>
+    <div className="container mx-auto p-4 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Complaints Management</h1>
+        <Button 
+          onClick={handleTriggerWorkflow} 
+          disabled={triggerLoading}
+          variant="outline"
+        >
+          {triggerLoading ? "Triggering..." : "Trigger Manual Workflow"}
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
-          <CardTitle>All Complaints</CardTitle>
+          <CardTitle>Recent Customer Complaints</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p>Loading complaints...</p>
+            <p className="text-center py-4">Loading complaints...</p>
+          ) : complaints.length === 0 ? (
+            <p className="text-center py-4 text-slate-500">No complaints found.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -64,11 +93,15 @@ const ComplaintsDashboard = () => {
               <TableBody>
                 {complaints.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell>{c.id}</TableCell>
+                    <TableCell className="font-medium">{c.id}</TableCell>
                     <TableCell>{c.user_name}</TableCell>
                     <TableCell>{c.email}</TableCell>
-                    <TableCell>{c.description}</TableCell>
-                    <TableCell>{c.department}</TableCell>
+                    <TableCell className="max-w-xs truncate">{c.description}</TableCell>
+                    <TableCell>
+                      <span className="px-2 py-1 bg-slate-100 rounded text-xs font-semibold">
+                        {c.department}
+                      </span>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -78,6 +111,4 @@ const ComplaintsDashboard = () => {
       </Card>
     </div>
   );
-};
-
-export default ComplaintsDashboard;
+}

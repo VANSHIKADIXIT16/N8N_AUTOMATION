@@ -2,6 +2,20 @@ import { auth } from "../lib/auth";
 
 const API_BASE_URL = "http://localhost:8000";
 
+export const triggerComplaintWorkflow = async (data: any) => {
+  const res = await fetch(`${API_BASE_URL}/complaints`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) throw new Error("Failed to trigger workflow");
+
+  return res.json();
+};
+
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const response = await fetch(`${API_BASE_URL}${url}`, {
     ...options,
@@ -37,7 +51,7 @@ export const uploadResume = async (file: File, roleId: number, parsedData?: any)
 };
 
 export const getRoles = async () => {
-  const response = await fetchWithAuth(`/roles/`); 
+  const response = await fetchWithAuth(`/roles/`);
   return response.json();
 };
 
